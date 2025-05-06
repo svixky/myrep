@@ -1,0 +1,151 @@
+pipeline {
+    agent any
+
+    environment {
+        COMMON_DIR = 'common_dist'
+        IMAGE_NAME = 'multiapp-nginx:latest'
+        CONTAINER_NAME = 'multiapp'
+        RECIPIENT = 'mailto:hariprasanthhp143@gmail.com'
+        DEPLOY_URL = 'http://localhost'
+        DEPLOY_PORT = '80'
+    }
+
+    options {
+        skipDefaultCheckout(true)
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    stages {
+         stage('Clean Workspace') {
+            steps {
+                deleteDir()
+            }
+        }
+
+        stage('Checkout and Build') {
+            parallel {
+                stage('Checkout and Build Admin') {
+                    steps {
+                        dir('admin') {
+                            git credentialsId: 'build-jenkin', url: 'https://github.com/elitesoftsysadmin/admin-app.git'
+                            bat 'npm i && ng build'
+                        }
+                    }
+                }
+                stage('Checkout and Build Operation') {
+                    steps {
+                        dir('operation') {
+                            git credentialsId: 'build-jenkin', url: 'https://github.com/elitesoftsysadmin/operations.git'
+                            bat 'npm i && ng build'
+                        }
+                    }
+                }
+                stage('Checkout and Build Support') {
+                    steps {
+                        dir('support') {
+                            git credentialsId: 'build-jenkin', url: 'https://github.com/elitesoftsysadmin/support-app.git'
+                            bat 'npm i && ng build'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Prepare and Copy Files') {
+            steps {
+                script {
+                    bat "if exist ${env.COMMON_DIR} rmdir /S /Q ${env.COMMON_DIR} || exit 0"
+                    bat "mkdir ${env.COMMON_DIR}"
+
+                    bat "xcopy admin\\dist\\* ${env.COMMON_DIR}\\admin /E /I /Y"
+                    bat "xcopy operation\\dist\\* ${env.COMMON_DIR}\\operation /E /I /Y"
+                    bat "xcopy support\\dist\\* ${env.COMMON_DIR}\\support /E /I /Y"
+					bat "xcopy support\\dist\\support\\browser\\* ${env.COMMON_DIR}\\support\\ /E /I /Y"
+					
+                    def nginxConf = '''
+                    events {}
+                    http {
+                        include /etc/nginx/mime.types;
+                        
+                        server {
+                            listen 80;
+                            server_name localhost;
+                            root /usr/share/nginx/html;
+                            index index.html;
+                            
+                            location / {
+                                try_files $uri $uri/ /index.html;
+                            }
+                        }
+                    }
+                    '''
+                    writeFile file: "${env.COMMON_DIR}/nginx.conf", text: nginxConf
+
+                    def dockerfileContent = '''
+                    FROM nginx:alpine
+                    COPY nginx.conf /etc/nginx/nginx.conf
+                    COPY admin /usr/share/nginx/html/admin
+                    COPY operation /usr/share/nginx/html/operation
+                    COPY support /usr/share/nginx/html/support
+                    '''
+                    writeFile file: "${env.COMMON_DIR}/Dockerfile", text: dockerfileContent
+                }
+            }
+        }
+
+        stage('Build and Deploy Docker') {
+            steps {
+                script {
+                    // Remove existing image if exists
+                    bat "docker rmi -f ${env.IMAGE_NAME} || exit 0"
+
+                    // Build Docker image
+                    dir("${env.COMMON_DIR}") {
+                        docker.build("${env.IMAGE_NAME}")
+                    }
+
+                    // Stop and remove existing container if exists
+                    bat "docker stop ${env.CONTAINER_NAME} || exit 0"
+                    bat "docker rm ${env.CONTAINER_NAME} || exit 0"
+
+                    // Run new container
+                    bat "docker run --name ${env.CONTAINER_NAME} -d -p ${env.DEPLOY_PORT}:80 ${env.IMAGE_NAME}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                def buildUrl = env.BUILD_URL
+                def deployUrlWithPort = "${env.DEPLOY_URL}:${env.DEPLOY_PORT}"
+                emailext (
+                    subject: "Build Successful: ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+                    body: """
+                        The build was successful. Check the details here: ${buildUrl}
+                        The application is deployed at: ${deployUrlWithPort}
+                    """,
+                    to: env.RECIPIENT
+                )
+            }
+        }
+
+        failure {
+            script {
+                def buildUrl = env.BUILD_URL
+                emailext (
+                    subject: "Build Failed: ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+                    body: """
+                        The build failed. Check the details here: ${buildUrl}
+                        Logs:
+                        ${currentBuild.rawBuild.log}
+                    """,
+                    to: env.RECIPIENT,
+                    attachmentsPattern: "**/*.log"
+                )
+            }
+        }
+    }
+}
