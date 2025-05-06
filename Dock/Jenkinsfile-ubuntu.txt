@@ -1,0 +1,78 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'test-docker-images:latest'
+        GIT_REPO = 'https://github.com/elitesoftsysadmin/test-pipeline-project..git'  
+    }
+
+    tools {
+        nodejs "nodejs" 
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    checkout([$class: 'GitSCM',
+                              branches: [[name: '*/master']],
+                              doGenerateSubmoduleConfigurations: false,
+                              extensions: [],
+                              userRemoteConfigs: [[url: "${GIT_REPO}", credentialsId: 'df8d9bf4-6423-4639-894b-b5d453c1b682']]
+                    ])
+                }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                script {
+                    // Install Node.js dependencies and build the Angular project
+                    sh '''
+                    npm i
+                    npm run build
+                    '''
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Build Docker image
+                    sh '''
+                    docker rmi -f ${DOCKER_IMAGE}
+                    docker build -t ${DOCKER_IMAGE} .
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Application') {
+            steps {
+                script {
+                    // Run Docker container
+                    sh '''
+                    docker stop my-angular-app || true
+                    docker rm -f my-angular-app || true
+                    docker run -d --name my-angular-app -p 8000:80 ${DOCKER_IMAGE}
+                    docker system prune -f
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed'
+            //cleanWs()
+        }
+        success {
+            echo 'Build and deployment succeeded'
+        }
+        failure {
+            echo 'Build or deployment failed'
+        }
+    }
+}

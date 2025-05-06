@@ -1,0 +1,45 @@
+services:
+  frontend:
+    build: mern/frontend/
+    container_name: frontend 
+    ports:
+      - "5173:5173"
+#    environment:
+#      REACT_APP_API_URL: http://backend:5050  { in this case we not using environment variable, it hard code directly, if they use env means
+    networks:                                #    need to add in compose file to communicate other containers { EX: get api request }          
+      - mern_network       
+
+  backend:
+    build: mern/backend/
+    container_name: backend
+    ports:
+      - "5050:5050"     
+    networks:
+      - mern_network 
+#    environment:
+#      MONGO_URI: mongodb://mongo:27017/mydatabase    
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    networks:
+      - mern_network
+    volumes:
+      - mongo-data:/data/db
+
+
+networks:
+  mern_network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+    driver: local
+
+
+# docker compose down -v  ----> to remove the compose containers 
+# docker compose down --rmi all -v   ----> to remove the all compose images
+# docker volume rm -f "volumeName"
