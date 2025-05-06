@@ -1,0 +1,120 @@
+pipeline {
+    // Define where the pipeline should run
+    agent {
+        label 'slave-1'  // Runs on Jenkins agent with label 'slave-1'
+    }
+    
+    // Tools to be installed and available in PATH {need to configure all tools in jenkins}
+    tools {
+        jdk 'java-jdk'  // JDK installation named 'java-jdk'
+        maven 'Maven'   // Maven installation named 'Maven'
+    }
+    
+    // Environment variables available throughout the pipeline
+    environment {
+        SCANNER_HOME = tool 'sonar'  // Path to SonarQube scanner {SCANNER_HOME environment variable points to the installation directory of SonarQube Scanner}
+        SONAR_SCANNER_OPTS = "-X"    // Sonar scanner options
+        DOCKER_IMAGE = 'shopping-cart'          // Docker image name
+        DOCKER_TAG = 'svixky/shopping:latest'   // Docker repository and tag
+        DOCKER_CON = 'shoppingCart-con'          // Docker container name
+    }
+    
+    stages {
+        // Stage 1: Checkout source code from Git repository
+        stage('git-checkout') {
+            steps {
+                git changelog: false, credentialsId: 'CI-CD-git', poll: false, url: 'https://github.com/elitesoftsysadmin/CI-CD-Pipeline-project.git'
+            }
+        }
+        
+        // Stage 2: Compile the Java source code and install dependency {It converts .java files into .class files}
+        stage('COMPILE') {
+            steps {
+                sh 'mvn clean compile -DskipTests=true'  // Skip tests during compilation
+            }
+        }
+        
+        // Stage 3: Dependency check for vulnerabilities
+        stage('DP-check') {
+            steps {
+                dependencyCheck additionalArguments: '--scan ./', odcInstallation: 'dp'   // --scan (mention the path)
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        
+        // Stage 4: Static code analysis with SonarQube { need to configure sonarqube server in system configuration}
+        stage('sonarQube') {
+            steps {
+                withSonarQubeEnv('sonar-server') {  // Use SonarQube server configuration
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Shopping-Cart \
+                    -Dsonar.java.binaries=. \
+                    -Dsonar.projectKey=Shopping-Cart '''
+                }
+            }
+        }
+        
+        // Stage 5: Build the application package {it will create a artifect file .war .jar}
+        stage('build') {
+            steps {
+                sh 'mvn clean package -DskipTests=true'  // Create package without tests
+                sh 'mv target/*.jar shopping.jar'         // Rename the JAR file
+            }
+        }
+        
+        // Stage 6: Build Docker image and push to registry
+        stage('Docker build & push') {
+            steps {
+               withDockerRegistry(credentialsId: 'Docker', url: 'https://index.docker.io/v1/') {
+                    // Clean up existing container and image
+                    sh ''' docker rm -f ${DOCKER_CON} 
+                    docker rmi ${DOCKER_IMAGE} '''
+                    
+                    // Build, tag and push Docker image
+                    sh ''' docker build -t ${DOCKER_IMAGE} .
+                    docker tag ${DOCKER_IMAGE} ${DOCKER_TAG}
+                    docker push ${DOCKER_TAG} '''
+                }
+            }
+        }
+        
+        // Stage 7: Run the Docker container
+        stage('Docker run') {
+            steps {
+               withDockerRegistry(credentialsId: 'Docker', url: 'https://index.docker.io/v1/') {
+                    sh 'docker run --name ${DOCKER_CON} -d -p 8000:8000 ${DOCKER_IMAGE}'
+                }
+            }
+        }
+    }
+    
+    // Post-build actions
+    post {
+        success  {
+            cleanWs()  // clean the workspace after build complete success
+        }
+    }
+}
+
+
+/*
+These are some automatically set by Jenkins and can be accessed in pipelines using ${VAR_NAME} or env.VAR_NAME:
+
+Variable	Description
+
+BUILD_NUMBER	Current build number (e.g., 42).
+BUILD_ID	Unique build ID (e.g., 2025-03-24_12-34-56).
+BUILD_TAG	Unique identifier for the build (e.g., jenkins-project-1-42).
+BUILD_URL	URL to the build results (e.g., http://jenkins-server/job/project/42/).
+JOB_NAME	Name of the job (e.g., my-pipeline).
+BUILD_DISPLAY_NAME	Display name of the build (e.g., #42 or custom names).
+BUILD_TIMESTAMP	Timestamp in yyyy-MM-dd_HH-mm-ss format (if Build Timestamp Plugin is used).
+IT_COMMIT	Full commit hash (e.g., d3adb33f).
+GIT_BRANCH	Full branch name (e.g., origin/main, feature/new-ui).
+GIT_LOCAL_BRANCH	Local branch name (if checked out, e.g., main).
+GIT_PREVIOUS_COMMIT	Previous commit hash before this build.
+GIT_URL	URL of the Git repository.
+GIT_AUTHOR_NAME	Name of the commit author.
+GIT_AUTHOR_EMAIL	Email of the commit author.
+currentBuild.currentResult	Current build result (SUCCESS, UNSTABLE, FAILURE, etc.).
+
+*/

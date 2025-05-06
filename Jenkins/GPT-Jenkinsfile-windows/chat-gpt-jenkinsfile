@@ -1,0 +1,115 @@
+pipeline {
+    agent any
+    tools {
+        nodejs 'NodeJS' // Ensure this matches the name in Jenkins Tool Configuration
+    }
+    environment {
+        BACKUP_PATH = "C:\\inetpub\\wwwroot\\jms_dev_backup"
+        TARGET_PATH = "C:\\inetpub\\wwwroot\\jms-dev"
+        BUILD_BACKUP = "C:\\inetpub\\wwwroot\\jms_dev_backup\\jms_dev_${BUILD_NUMBER}"
+        DEV_SERVER_URL = "http://35.169.152.152/login"
+        EMAIL_RECIPIENTS = "sysadmin@elitecorpusa.com, balamuruganravi@elitecorpusa.com, arumugam@elitecorpusa.com, selvakumar@elitecorpusa.com, yogeswaran@elitecorpusa.com"
+        EMAIL_FROM = "eliteoffice022@gmail.com"
+    }
+    stages {
+        stage('Clean Workspace & Clone Repository') {
+            steps {
+                cleanWs()
+                git branch: 'stage', credentialsId: 'JMS_Git', url: 'https://github.com/elitesoftsysadmin/JMS-React.git'
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                dir('JMS') {
+                    bat 'npm install --force'
+                }
+            }
+        }
+        stage('Build React App') {
+            steps {
+                dir('JMS') {
+                    bat 'npm run build'
+                }
+            }
+        }
+        stage('Backup Old Deployment') {
+            steps {
+                script {
+                    def backupCmd = """
+                    if exist "%TARGET_PATH%\\assets" (
+                        mkdir "%BUILD_BACKUP%" 2>nul
+                        move "%TARGET_PATH%\\assets" "%BUILD_BACKUP%\\"
+                    )
+                    if exist "%TARGET_PATH%\\index.html" (
+                        move "%TARGET_PATH%\\index.html" "%BUILD_BACKUP%\\"
+                    )
+                    """
+                    bat backupCmd
+                }
+            }
+        }
+        stage('Deploy to IIS') {
+            steps {
+                bat '''
+                xcopy /E /I /Y JMS\\dist\\* "%TARGET_PATH%"
+                '''
+            }
+        }
+        stage('Restart IIS') {
+            steps {
+                bat 'iisreset'
+            }
+        }
+        stage('Cleanup Old Backups') {
+            steps {
+                script {
+                    bat '''
+                    for /F "skip=3 delims=" %%F in ('dir /B /O-D "%BACKUP_PATH%\\jms_dev_*"') do rmdir /S /Q "%BACKUP_PATH%\\%%F"
+                    '''
+                }
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                sendEmailNotification(currentBuild.result ?: 'SUCCESS')
+            }
+        }
+    }
+}
+
+// Function to Send Email Notification
+def sendEmailNotification(String buildStatus) {
+    def color = (buildStatus == "SUCCESS") ? "green" : "red"
+    
+    emailext(
+        from: "${EMAIL_FROM}",
+        subject: "Jenkins Build #${BUILD_NUMBER} - ${buildStatus}",
+        body: """
+        <html>
+        <head>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; }
+            .status { text-align: center; font-size: 18px; font-weight: bold; color: ${color}; }
+            .container { padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+            .footer { text-align: center; font-size: 12px; color: #666; margin-top: 20px; }
+        </style>
+        </head>
+        <body>
+            <div class="container">
+                <p class="status">${buildStatus}</p>
+                <p><strong>🔢 Build Number:</strong> ${BUILD_NUMBER}</p>
+                <p><strong>🌐 Dev Server:</strong> <a href="${DEV_SERVER_URL}" style="color: #007BFF;">${DEV_SERVER_URL}</a></p>
+                <p><a href="${env.BUILD_URL}console" style="color: #007BFF;">📜 View Console Output</a></p>
+            </div>
+            <div class="footer">
+                <p>This is an automated email from Jenkins.</p>
+            </div>
+        </body>
+        </html>
+        """,
+        to: "${EMAIL_RECIPIENTS}",
+        mimeType: 'text/html'
+    )
+}
