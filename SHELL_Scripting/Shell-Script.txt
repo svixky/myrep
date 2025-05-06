@@ -1,0 +1,34 @@
+#!/bin/bash
+
+
+
+### provide a meta Data to identify the purpose of script
+######################
+
+# Author:  vigneshwaran
+# Date: 4//6/2024
+#
+# this script output the node health
+#
+# Version: V1
+########################
+
+
+### Using echo we can identify what the command does
+
+### Anothe way to idendify what the command does use: set -x
+
+set -x   ## debug mode (it shows the command and the output)
+
+set -e      ## exit the script when there is an error  (it not find pipe cmd error)
+
+set -o pipefail    ## it will exit the script if any error in pipe cmd.
+
+#echo "Print the disk space"
+df -Th
+
+#echo "print the memory"
+free
+
+#echo "print the cpu"
+nproc
