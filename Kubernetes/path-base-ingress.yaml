@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mern-ingress
+  annotations:
+spec:
+  rules:
+  - host: "mernstack.com" #{host based}
+    http:
+      paths:
+      - pathType: Prefix
+        path: /mern
+        backend:
+          service:
+            name: mern-service
+            port:
+              number: 80
+      - pathType: Prefix
+        path: /shop
+        backend:
+          service:
+            name: shopping-service
+            port:
+              number: 80
+
+  # if in code they allow any prefix means it's work normaly, otherwise in code also need to make changes for path route { / };{/mern}
+

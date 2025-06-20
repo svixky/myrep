@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shopingkart-deployment
+  labels:
+    app: shoppingkart
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: shoppingkart
+  template:
+    metadata:
+      labels:
+        app: shoppingkart
+    spec:
+      containers:
+      - name: shopping-container
+        image: svixky/shopping:latest
+        ports:
+        - containerPort: 8000
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mern
+  labels:
+    app: mern
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mern 
+  template:
+    metadata:
+      labels:
+        app: mern
+    spec:
+      containers:
+      - name: mern-container
+        image: svixky/mern-docker-compose-frontend:vi
+        ports:
+        - containerPort: 5173
+

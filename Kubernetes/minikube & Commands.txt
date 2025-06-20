@@ -1,0 +1,102 @@
+📘 Minikube & Kubernetes Notes
+
+🔹 What is Kubernetes Cluster?
+- A cluster is a set of nodes (servers) that run containerized applications.
+- Components:
+  • Control Plane (Master) – manages the cluster.
+  • Nodes (Workers) – run the applications in pods.
+
+🔹 What is Minikube?
+- Minikube is a local tool that runs a single-node Kubernetes cluster on your machine.
+- Great for development and testing.
+
+🔹 Minikube Commands
+- Start cluster:
+    minikube start --driver=hyperv --hyperv-virtual-switch="MinikubeSwitch"
+- Delete cluster:
+    minikube delete
+- Check Minikube status:
+    minikube status
+- Get Minikube IP:
+    minikube ip
+- Open service in browser:
+    minikube service <service-name>
+- Dashboard (UI):
+    minikube dashboard
+
+🔹 What is a Pod?
+- The smallest unit in Kubernetes.
+- Can contain one or more containers.
+- Exposes ports only inside the cluster.
+
+🔹 Pod YAML Example
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shoppingkart
+  labels:
+    app: shoppingkart
+spec:
+  containers:
+  - name: nginx
+    image: svixky/shopping:latest
+    ports:
+    - containerPort: 8000
+
+🔹 Service YAML Example (to expose the pod)
+apiVersion: v1
+kind: Service
+metadata:
+  name: shoppingkart
+spec:
+  type: NodePort
+  selector:
+    app: shoppingkart
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30080
+
+🔹 Access the App
+- Use the Minikube IP and NodePort:
+    http://<minikube-ip>:30080
+- Example:
+    http://192.168.49.2:30080
+
+🔹 kubectl Commands (Frequently Used)
+- Check Kubernetes version:
+    kubectl version
+
+👉 Pods
+- Create pod from YAML:
+    kubectl apply -f pod.yaml
+- Get all pods:
+    kubectl get pods
+- Describe a specific pod:
+    kubectl describe pod <pod-name>
+- Delete a pod:
+    kubectl delete pod <pod-name>
+- Logs of a pod:
+    kubectl logs <pod-name>
+- Exec into a running pod:
+    kubectl exec -it <pod-name> -- /bin/bash
+
+👉 Services
+- Get all services:
+    kubectl get svc
+- Expose a pod through the command:
+    kubectl expose pod <pod-name> --type=NodePort --port=8000 --target-port=8000
+- Delete a service:
+    kubectl delete service <service-name>
+
+👉 Apply & Delete YAML files
+- Apply:
+    kubectl apply -f <filename>.yaml
+- Delete:
+    kubectl delete -f <filename>.yaml
+
+
+Common Issues & Fixes
+
+ Can't access app on port 8000 directly
+  ✅ Fix: Use nodePort in Service and access via that external port
