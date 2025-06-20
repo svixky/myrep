@@ -1,0 +1,46 @@
+- hosts: all
+  remote_user: ec2-user
+  become: yes
+  tasks:
+  - name: install the latest version of Apache
+    yum:
+      name: httpd
+      state: present
+  - name: Start service httpd, if not started
+    service:
+      name: httpd
+      state: started
+  - name: Copy file with owner and permissions
+    copy:
+      src: /home/ec2-user/index.html
+      dest: /var/www/html/index.html
+      mode: '777'
+
+
+# this is basic formate for every playbook
+
+- hosts: all            ------> we can give particular server also 
+  remote_user: ec2-user  
+  become: yes
+  tasks:
+
+
+#loop
+
+- hosts: all
+  remote_user: ec2-user
+  become: yes
+  tasks:
+  - name: install latest version of tool
+    yum:
+      name: "{{ item }}"
+      state: present
+    loop:
+      - pip
+      - mysql
+      - httpd
+      - unzip
+  
+       it is used to install multiple thing or service
+
+

@@ -1,0 +1,21 @@
+- hosts: localhost
+  remote_user: ubuntu
+  become: yes
+  tasks:
+  - name: creating a ec2 instance
+    amazon.aws.ec2_instance:
+      name: test-{{item}}
+      region: ap-northeast-1
+      key_name: "tokyo - my key1"
+      vpc_subnet_id: subnet-01651ecc85f0b9914
+      instance_type: t2.micro
+      security_group: linux
+      count: 1
+      network:
+        assign_public_ip: true
+      image_id: ami-0d52744d6551d851e
+    register: ec2
+    with_items: 
+      - 1
+      - 2
+      - 3       

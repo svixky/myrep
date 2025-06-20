@@ -1,0 +1,115 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-74.0445, 40.6892]
+      },
+      "properties": {
+        "name": "Statue of Liberty",
+        "description": "A symbol of freedom and democracy."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-77.0369, 38.9072]
+      },
+      "properties": {
+        "name": "Washington Monument",
+        "description": "A towering monument honoring George Washington."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.4194, 37.7749]
+      },
+      "properties": {
+        "name": "Golden Gate Bridge",
+        "description": "An iconic suspension bridge in San Francisco."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-73.9857, 40.7484]
+      },
+      "properties": {
+        "name": "Empire State Building",
+        "description": "An iconic skyscraper in New York City."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-118.2437, 34.0522]
+      },
+      "properties": {
+        "name": "Hollywood Sign",
+        "description": "Famous landmark and cultural icon."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-104.9903, 39.7392]
+      },
+      "properties": {
+        "name": "Denver Union Station",
+        "description": "Historic transit hub in Denver."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-95.3698, 29.7604]
+      },
+      "properties": {
+        "name": "Houston Space Center",
+        "description": "NASA's Johnson Space Center."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-73.9851, 40.7580]
+      },
+      "properties": {
+        "name": "Times Square",
+        "description": "Famous commercial intersection in NYC."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-87.6349, 41.8818]
+      },
+      "properties": {
+        "name": "Willis Tower",
+        "description": "Formerly known as Sears Tower."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-73.9683, 40.7851]
+      },
+      "properties": {
+        "name": "Central Park",
+        "description": "Large public park in New York City."
+      }
+    }
+  ]
+}
